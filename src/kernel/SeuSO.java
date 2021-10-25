@@ -21,6 +21,7 @@ public class SeuSO extends SO {
 		pcb.contadorDePrograma = 0;
 		pcb.idProcesso = novos.size();
 		novos.add(pcb);
+
 	}
 
 	@Override
