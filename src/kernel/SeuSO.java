@@ -1,57 +1,77 @@
 package kernel;
-import java.util.List;
+import java.util.*;
 
+import operacoes.Carrega;
 import operacoes.Operacao;
 import operacoes.OperacaoES;
+import operacoes.Soma;
 
 public class SeuSO extends SO {
+	private List<PCB> novos = new LinkedList<>();
+	private List<PCB> prontos = new LinkedList<>();
+	private PCB atual;
+	private Escalonador e;
 
 	@Override
-	// ATENCÃO: cria o processo mas o mesmo 
+	// ATENCÃO: cria o processo mas o mesmo
 	// só estará "pronto" no próximo ciclo
 	protected void criaProcesso(Operacao[] codigo) {
-		// TODO Auto-generated method stub
+		PCB pcb = new PCB();
+		pcb.codigo = codigo;
+		pcb.contadorDePrograma = 0;
+		pcb.idProcesso = novos.size();
+		novos.add(pcb);
 	}
 
 	@Override
 	protected void trocaContexto(PCB pcbAtual, PCB pcbProximo) {
-		// TODO Auto-generated method stub
+		pcbAtual.registradores = processador.registradores;
+		atual = pcbProximo;
+		processador.registradores = atual.registradores;
 	}
 
 	@Override
 	// Assuma que 0 <= idDispositivo <= 4
 	protected OperacaoES proximaOperacaoES(int idDispositivo) {
-		// TODO Auto-generated method stub
-		return null;
+		Operacao op = atual.codigo[atual.contadorDePrograma];
+		if (op instanceof OperacaoES)
+			return (OperacaoES) op;
+		return null;///////////procura a prox
 	}
 
 	@Override
 	protected Operacao proximaOperacaoCPU() {
-		// TODO Auto-generated method stub
-		return null;
+		Operacao op = atual.codigo[atual.contadorDePrograma];
+		if (op instanceof Soma || op instanceof Carrega)
+			return op;
+		return null;///////////procura a prox
 	}
 
 	@Override
 	protected void executaCicloKernel() {
-		// TODO Auto-generated method stub
+		for(PCB p : novos) {
+			p.estado = PCB.Estado.PRONTO;
+			prontos.add(p);
+			novos.remove(p);
+		}//////////n sei se sao todos de uma vez (acho q nao)
 	}
 
 	@Override
 	protected boolean temTarefasPendentes() {
-		// TODO Auto-generated method stub
-		return false;
+		return !prontos.isEmpty();///////////
 	}
 
 	@Override
 	protected Integer idProcessoNovo() {
-		// TODO Auto-generated method stub
-		return null;
+		return novos.get(novos.size()-1).idProcesso;
 	}
 
 	@Override
 	protected List<Integer> idProcessosProntos() {
-		// TODO Auto-generated method stub
-		return null;
+		List<Integer> ipp = new LinkedList<>();
+		for (PCB p : prontos)
+			ipp.add(p.idProcesso);
+		return ipp;
 	}
 
 	@Override
@@ -98,6 +118,6 @@ public class SeuSO extends SO {
 
 	@Override
 	public void defineEscalonador(Escalonador e) {
-		// TODO Auto-generated method stub
+		this.e = e;
 	}
 }
