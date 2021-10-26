@@ -9,6 +9,8 @@ import operacoes.Soma;
 public class SeuSO extends SO {
 	private List<PCB> novos = new LinkedList<>();
 	private List<PCB> prontos = new LinkedList<>();
+	private List<PCB> esperando = new LinkedList<>();
+	private List<PCB> terminados = new LinkedList<>();
 	private PCB atual;
 	private Escalonador e;
 
@@ -21,45 +23,41 @@ public class SeuSO extends SO {
 		pcb.contadorDePrograma = 0;
 		pcb.idProcesso = novos.size();
 		novos.add(pcb);
-
 	}
 
 	@Override
 	protected void trocaContexto(PCB pcbAtual, PCB pcbProximo) {
 		pcbAtual.registradores = processador.registradores;
+		pcbAtual.estado = PCB.Estado.ESPERANDO;
+		esperando.add(pcbAtual);
 		atual = pcbProximo;
+		atual.estado = PCB.Estado.EXECUTANDO;
 		processador.registradores = atual.registradores;
 	}
 
 	@Override
 	// Assuma que 0 <= idDispositivo <= 4
 	protected OperacaoES proximaOperacaoES(int idDispositivo) {
-		Operacao op = atual.codigo[atual.contadorDePrograma];
-		if (op instanceof OperacaoES)
-			return (OperacaoES) op;
 		return null;///////////procura a prox
 	}
 
 	@Override
 	protected Operacao proximaOperacaoCPU() {
-		Operacao op = atual.codigo[atual.contadorDePrograma];
-		if (op instanceof Soma || op instanceof Carrega)
-			return op;
-		return null;///////////procura a prox
+		for (int i = atual.contadorDePrograma; i < atual.codigo.length; i++) {
+			Operacao op = atual.codigo[i];
+			if (op instanceof Soma || op instanceof Carrega) return op;
+		}
+		return null;
 	}
 
 	@Override
 	protected void executaCicloKernel() {
-		for(PCB p : novos) {
-			p.estado = PCB.Estado.PRONTO;
-			prontos.add(p);
-			novos.remove(p);
-		}//////////n sei se sao todos de uma vez (acho q nao)
+		novos.get(idProcessoNovo()).estado = PCB.Estado.PRONTO;/////acho q é um de cada vez(tvz n)
 	}
 
 	@Override
 	protected boolean temTarefasPendentes() {
-		return !prontos.isEmpty();///////////
+		return !prontos.isEmpty() || !novos.isEmpty();
 	}
 
 	@Override
@@ -70,27 +68,27 @@ public class SeuSO extends SO {
 	@Override
 	protected List<Integer> idProcessosProntos() {
 		List<Integer> ipp = new LinkedList<>();
-		for (PCB p : prontos)
-			ipp.add(p.idProcesso);
+		for (PCB p : prontos) ipp.add(p.idProcesso);
 		return ipp;
 	}
 
 	@Override
 	protected Integer idProcessoExecutando() {
-		// TODO Auto-generated method stub
-		return null;
+		return atual.idProcesso;
 	}
 
 	@Override
 	protected List<Integer> idProcessosEsperando() {
-		// TODO Auto-generated method stub
-		return null;
+		List<Integer> ie = new LinkedList<>();
+		for (PCB pcb : esperando) ie.add(pcb.idProcesso);
+		return ie;
 	}
 
 	@Override
 	protected List<Integer> idProcessosTerminados() {
-		// TODO Auto-generated method stub
-		return null;
+		List<Integer> it = new LinkedList<>();
+		for (PCB pcb : terminados) it.add(pcb.idProcesso);
+		return it;
 	}
 
 	@Override
