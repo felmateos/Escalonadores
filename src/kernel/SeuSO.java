@@ -11,8 +11,10 @@ public class SeuSO extends SO {
 	private List<PCB> prontos = new LinkedList<>();
 	private List<PCB> esperando = new LinkedList<>();
 	private List<PCB> terminados = new LinkedList<>();
+	private Map<Integer, LinkedList<OperacaoES>> opsDispES = new TreeMap<>();
 	private PCB atual;
 	private Escalonador e;
+	private int pCount = 0;
 
 	@Override
 	// ATENCÃO: cria o processo mas o mesmo
@@ -21,7 +23,8 @@ public class SeuSO extends SO {
 		PCB pcb = new PCB();
 		pcb.codigo = codigo;
 		pcb.contadorDePrograma = 0;
-		pcb.idProcesso = novos.size();
+		pcb.idProcesso = pCount;
+		pCount++;
 		novos.add(pcb);
 	}
 
@@ -38,22 +41,66 @@ public class SeuSO extends SO {
 	@Override
 	// Assuma que 0 <= idDispositivo <= 4
 	protected OperacaoES proximaOperacaoES(int idDispositivo) {
-		return null;///////////procura a prox
+		if (opsDispES.get(idDispositivo).isEmpty()) return null;
+		return opsDispES.get(idDispositivo).get(0);
 	}
 
 	@Override
 	protected Operacao proximaOperacaoCPU() {
+		if(atual.estado == PCB.Estado.PRONTO) atual.estado = PCB.Estado.EXECUTANDO;
 		for (int i = atual.contadorDePrograma; i < atual.codigo.length; i++) {
 			Operacao op = atual.codigo[i];
-			if (op instanceof Soma || op instanceof Carrega) return op;
+			if (op instanceof Soma || op instanceof Carrega) {
+				atual.contadorDePrograma++;
+				if (atual.contadorDePrograma == atual.codigo.length) atual = null;
+				return op;
+			} else addOperacaoES(op);
 		}
 		return null;
 	}
 
+	protected void addOperacaoES(Operacao op) {
+		OperacaoES opES = (OperacaoES) op;
+		if (opsDispES.isEmpty()) inicializaMap(opsDispES);
+		opsDispES.get(opES.idDispositivo).add(opES);
+	}
+
+	protected void inicializaMap(Map<Integer, LinkedList<OperacaoES>> map) {
+		for(int i = 0; i < 5; i++)
+			map.put(i, new LinkedList<OperacaoES>());
+	}
 	@Override
 	protected void executaCicloKernel() {
-		novos.get(idProcessoNovo()).estado = PCB.Estado.PRONTO;/////acho q é um de cada vez(tvz n)
+	    switch(e) {
+            case FIRST_COME_FIRST_SERVED -> executaCicloFCFS();
+            case SHORTEST_JOB_FIRST -> executaCicloSJF();
+            case SHORTEST_REMANING_TIME_FIRST -> executaCicloSRTF();
+            case ROUND_ROBIN_QUANTUM_5 -> executaCicloRRQF();
+            default -> throw new RuntimeException("Escalonador Inválido.");
+        }
 	}
+
+	protected void executaCicloFCFS() {
+		if (!novos.isEmpty()) {
+			PCB n = novos.get(0);
+			n.estado = PCB.Estado.PRONTO;
+			prontos.add(n);
+			novos.remove(n);
+			if (atual == null) atual = prontos.get(0);
+		}
+    }
+
+    protected void executaCicloSJF() {
+
+    }
+
+    protected void executaCicloSRTF() {
+
+    }
+
+    protected void executaCicloRRQF() {
+
+    }
 
 	@Override
 	protected boolean temTarefasPendentes() {
@@ -62,6 +109,7 @@ public class SeuSO extends SO {
 
 	@Override
 	protected Integer idProcessoNovo() {
+		if (novos.isEmpty()) return null;
 		return novos.get(novos.size()-1).idProcesso;
 	}
 
