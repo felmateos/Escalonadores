@@ -48,13 +48,13 @@ public class SeuSO extends SO {
 	@Override
 	protected Operacao proximaOperacaoCPU() {
 		if(atual.estado == PCB.Estado.PRONTO) atual.estado = PCB.Estado.EXECUTANDO;
-		for (int i = atual.contadorDePrograma; i < atual.codigo.length; i++) {
+		int i = atual.contadorDePrograma;
+		while (i < atual.codigo.length) {
 			Operacao op = atual.codigo[i];
-			if (op instanceof Soma || op instanceof Carrega) {
-				atual.contadorDePrograma++;
-				if (atual.contadorDePrograma == atual.codigo.length) atual = null;
-				return op;
-			} else addOperacaoES(op);
+			atual.contadorDePrograma++;
+			if (op instanceof Soma || op instanceof Carrega) return op;
+			else addOperacaoES(op);
+			i = atual.contadorDePrograma;
 		}
 		return null;
 	}
@@ -78,6 +78,13 @@ public class SeuSO extends SO {
             case ROUND_ROBIN_QUANTUM_5 -> executaCicloRRQF();
             default -> throw new RuntimeException("Escalonador Inválido.");
         }
+		if (atual.contadorDePrograma == atual.codigo.length-1) {
+			terminados.add(atual);
+			//prontos.remove(terminados.size()-1);
+			//prontos.remove(atual);
+			atual = prontos.get(terminados.size());
+			System.out.println("NEW POS: " + (terminados.size()));
+		}
 	}
 
 	protected void executaCicloFCFS() {
@@ -122,6 +129,7 @@ public class SeuSO extends SO {
 
 	@Override
 	protected Integer idProcessoExecutando() {
+		if (atual == null) return null;
 		return atual.idProcesso;
 	}
 
