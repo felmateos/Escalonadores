@@ -1,12 +1,11 @@
 package kernel;
 import java.util.*;
 
-import operacoes.Carrega;
-import operacoes.Operacao;
-import operacoes.OperacaoES;
-import operacoes.Soma;
+import operacoes.*;
+import escalonadores.*;
 
 public class SeuSO extends SO {
+	escalonadores.Escalonador escalonador;
 	private List<PCB> novos = new LinkedList<>();
 	private List<PCB> prontos = new LinkedList<>();
 	private List<PCB> esperando = new LinkedList<>();
@@ -29,7 +28,7 @@ public class SeuSO extends SO {
 	}
 
 	@Override
-	protected void trocaContexto(PCB pcbAtual, PCB pcbProximo) {
+	protected void trocaContexto(PCB pcbAtual, PCB pcbProximo) {//pq tem o pcbAtual se ja tem o atual? fizemo caquinha
 		pcbAtual.registradores = processador.registradores;
 		pcbAtual.estado = PCB.Estado.ESPERANDO;
 		esperando.add(pcbAtual);
@@ -71,47 +70,13 @@ public class SeuSO extends SO {
 	}
 	@Override
 	protected void executaCicloKernel() {
-	    switch(e) {
-            case FIRST_COME_FIRST_SERVED -> executaCicloFCFS();
-            case SHORTEST_JOB_FIRST -> executaCicloSJF();
-            case SHORTEST_REMANING_TIME_FIRST -> executaCicloSRTF();
-            case ROUND_ROBIN_QUANTUM_5 -> executaCicloRRQF();
-            default -> throw new RuntimeException("Escalonador Inválido.");
-        }
-		if (atual.contadorDePrograma == atual.codigo.length-1) {
-			terminados.add(atual);
-			//prontos.remove(terminados.size()-1);
-			//prontos.remove(atual);
-			atual = prontos.get(terminados.size());
-			System.out.println("NEW POS: " + (terminados.size()));
-		}
+		escalonador.setAtual(atual);
+		atual = escalonador.executaCiclo(novos, prontos, terminados);
 	}
-
-	protected void executaCicloFCFS() {
-		if (!novos.isEmpty()) {
-			PCB n = novos.get(0);
-			n.estado = PCB.Estado.PRONTO;
-			prontos.add(n);
-			novos.remove(n);
-			if (atual == null) atual = prontos.get(0);
-		}
-    }
-
-    protected void executaCicloSJF() {
-
-    }
-
-    protected void executaCicloSRTF() {
-
-    }
-
-    protected void executaCicloRRQF() {
-
-    }
 
 	@Override
 	protected boolean temTarefasPendentes() {
-		return !prontos.isEmpty() || !novos.isEmpty();
+		return !prontos.isEmpty() || !novos.isEmpty();//esperando
 	}
 
 	@Override
@@ -174,5 +139,13 @@ public class SeuSO extends SO {
 	@Override
 	public void defineEscalonador(Escalonador e) {
 		this.e = e;
+		criaEscalonador();
+	}
+
+	protected void criaEscalonador() {
+		switch (e) {
+			case FIRST_COME_FIRST_SERVED -> this.escalonador = new FCFS();
+			default -> throw new RuntimeException("Escalonador inválido.");
+		}
 	}
 }

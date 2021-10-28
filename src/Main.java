@@ -7,6 +7,7 @@ import kernel.SO.Escalonador;
 import kernel.SeuSO;
 
 public class Main {
+
 	public static void main(String[] args) throws FileNotFoundException {
 		List<Escalonador> escalonadores = new LinkedList<>();
 		escalonadores.add(SO.Escalonador.FIRST_COME_FIRST_SERVED);
