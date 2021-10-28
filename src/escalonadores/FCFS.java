@@ -21,10 +21,10 @@ public class FCFS extends Escalonador {
 
     @Override
     public PCB verificaProcesso (List<PCB> prontos, List<PCB> terminados){
-        if (super.getAtual().contadorDePrograma == super.getAtual().codigo.length-1) {
+        if (super.getUltimaOp()) {
             prontos.remove(super.getAtual());
             terminados.add(super.getAtual());
-            System.out.println("NEW POS: " + (terminados.size()));
+            super.setUltimaOp(false);
             return escolheProximo(prontos, terminados);
         }
         return super.getAtual();

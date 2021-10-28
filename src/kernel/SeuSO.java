@@ -47,15 +47,26 @@ public class SeuSO extends SO {
 	@Override
 	protected Operacao proximaOperacaoCPU() {
 		if(atual.estado == PCB.Estado.PRONTO) atual.estado = PCB.Estado.EXECUTANDO;
-		int i = atual.contadorDePrograma;
-		while (i < atual.codigo.length) {
-			Operacao op = atual.codigo[i];
+		while (atual.contadorDePrograma < atual.codigo.length) {
+			Operacao op = atual.codigo[atual.contadorDePrograma];
 			atual.contadorDePrograma++;
+			if (!verificaProx()) {
+				escalonador.setUltimaOp(true);
+				atual = escalonador.verificaProcesso(prontos, terminados);
+			}
 			if (op instanceof Soma || op instanceof Carrega) return op;
 			else addOperacaoES(op);
-			i = atual.contadorDePrograma;
 		}
 		return null;
+	}
+
+	public boolean verificaProx() {
+		if (atual.contadorDePrograma == atual.codigo.length) return false;
+		for(int i = atual.contadorDePrograma; i < atual.codigo.length; i++)
+			if (atual.codigo[i] instanceof Soma || atual.codigo[i] instanceof OperacaoES) return true;
+		for(int i = atual.contadorDePrograma; i < atual.codigo.length; i++)
+			addOperacaoES(atual.codigo[i]);
+		return false;
 	}
 
 	protected void addOperacaoES(Operacao op) {
@@ -144,7 +155,10 @@ public class SeuSO extends SO {
 
 	protected void criaEscalonador() {
 		switch (e) {
-			case FIRST_COME_FIRST_SERVED -> this.escalonador = new FCFS();
+			case FIRST_COME_FIRST_SERVED -> this.escalonador = new FCFS();//////////
+			case SHORTEST_JOB_FIRST -> this.escalonador = new FCFS();//////////
+			case SHORTEST_REMANING_TIME_FIRST -> this.escalonador = new FCFS();//////////
+			case ROUND_ROBIN_QUANTUM_5 -> this.escalonador = new FCFS();//////////
 			default -> throw new RuntimeException("Escalonador inválido.");
 		}
 	}
