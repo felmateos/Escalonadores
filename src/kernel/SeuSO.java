@@ -46,11 +46,10 @@ public class SeuSO extends SO {
 
 	@Override
 	protected Operacao proximaOperacaoCPU() {
-		if(atual.estado == PCB.Estado.PRONTO) atual.estado = PCB.Estado.EXECUTANDO;
 		while (atual.contadorDePrograma < atual.codigo.length) {
 			Operacao op = atual.codigo[atual.contadorDePrograma];
 			atual.contadorDePrograma++;
-			if (!verificaProx()) {
+			if (escalonador.getUltimaOp() || atual.contadorDePrograma == atual.codigo.length) {
 				escalonador.setUltimaOp(true);
 				atual = escalonador.verificaProcesso(prontos, terminados);
 			}
@@ -58,15 +57,6 @@ public class SeuSO extends SO {
 			else addOperacaoES(op);
 		}
 		return null;
-	}
-
-	public boolean verificaProx() {
-		if (atual.contadorDePrograma == atual.codigo.length) return false;
-		for(int i = atual.contadorDePrograma; i < atual.codigo.length; i++)
-			if (atual.codigo[i] instanceof Soma || atual.codigo[i] instanceof OperacaoES) return true;
-		for(int i = atual.contadorDePrograma; i < atual.codigo.length; i++)
-			addOperacaoES(atual.codigo[i]);
-		return false;
 	}
 
 	protected void addOperacaoES(Operacao op) {
@@ -81,8 +71,17 @@ public class SeuSO extends SO {
 	}
 	@Override
 	protected void executaCicloKernel() {
-		escalonador.setAtual(atual);
 		atual = escalonador.executaCiclo(novos, prontos, terminados);
+		if (!verificaProx()) escalonador.setUltimaOp(true);
+	}
+
+	public boolean verificaProx() {
+		if (atual.contadorDePrograma >= atual.codigo.length - 1) return false;
+		for(int i = atual.contadorDePrograma; i < atual.codigo.length; i++)
+			if (atual.codigo[i] instanceof Soma || atual.codigo[i] instanceof Carrega) return true;
+		for(int i = atual.contadorDePrograma; i < atual.codigo.length; i++)
+			addOperacaoES(atual.codigo[i]);
+		return false;
 	}
 
 	@Override

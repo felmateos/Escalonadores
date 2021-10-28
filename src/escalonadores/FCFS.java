@@ -22,6 +22,7 @@ public class FCFS extends Escalonador {
     @Override
     public PCB verificaProcesso (List<PCB> prontos, List<PCB> terminados){
         if (super.getUltimaOp()) {
+            super.getAtual().estado = PCB.Estado.TERMINADO;
             prontos.remove(super.getAtual());
             terminados.add(super.getAtual());
             super.setUltimaOp(false);
@@ -32,7 +33,12 @@ public class FCFS extends Escalonador {
 
     @Override
     public PCB escolheProximo(List<PCB> prontos, List<PCB> terminados) {
-        if (!prontos.isEmpty()) return prontos.get(0);
+        if (!prontos.isEmpty()) {
+            PCB atual = prontos.get(0);
+            atual.estado = PCB.Estado.EXECUTANDO;
+            super.setAtual(atual);
+            return atual;
+        }
         return null;
     }
 }
