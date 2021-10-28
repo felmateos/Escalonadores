@@ -40,6 +40,7 @@ public class SeuSO extends SO {
 	@Override
 	// Assuma que 0 <= idDispositivo <= 4
 	protected OperacaoES proximaOperacaoES(int idDispositivo) {
+		if (opsDispES.isEmpty()) inicializaMap(opsDispES);
 		if (opsDispES.get(idDispositivo).isEmpty()) return null;
 		return opsDispES.get(idDispositivo).get(0);
 	}
@@ -77,9 +78,9 @@ public class SeuSO extends SO {
 
 	public boolean verificaProx() {
 		if (atual.contadorDePrograma >= atual.codigo.length - 1) return false;
-		for(int i = atual.contadorDePrograma; i < atual.codigo.length; i++)
+		for(int i = atual.contadorDePrograma+1; i < atual.codigo.length; i++)
 			if (atual.codigo[i] instanceof Soma || atual.codigo[i] instanceof Carrega) return true;
-		for(int i = atual.contadorDePrograma; i < atual.codigo.length; i++)
+		for(int i = atual.contadorDePrograma+1; i < atual.codigo.length; i++)
 			addOperacaoES(atual.codigo[i]);
 		return false;
 	}
