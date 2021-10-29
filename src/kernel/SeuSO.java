@@ -10,8 +10,7 @@ public class SeuSO extends SO {
 	private List<PCB> prontos = new LinkedList<>();
 	private List<PCB> esperando = new LinkedList<>();
 	private List<PCB> terminados = new LinkedList<>();
-	private Map<Integer, LinkedList<OperacaoES>> opsDispES = new TreeMap<>();
-	private PCB atual;
+	private Map<Integer, LinkedList<Pendencia>> opsDispES = new TreeMap<>();
 	private Escalonador e;
 	private int pCount = 0;
 
@@ -21,73 +20,94 @@ public class SeuSO extends SO {
 	protected void criaProcesso(Operacao[] codigo) {
 		PCB pcb = new PCB();
 		pcb.codigo = codigo;
-		pcb.contadorDePrograma = 0;
 		pcb.idProcesso = pCount;
 		pCount++;
 		novos.add(pcb);
 	}
 
 	@Override
-	protected void trocaContexto(PCB pcbAtual, PCB pcbProximo) {//pq tem o pcbAtual se ja tem o atual? fizemo caquinha
+	protected void trocaContexto(PCB pcbAtual, PCB pcbProximo) {
 		pcbAtual.registradores = processador.registradores;
-		pcbAtual.estado = PCB.Estado.ESPERANDO;
-		esperando.add(pcbAtual);
-		atual = pcbProximo;
-		atual.estado = PCB.Estado.EXECUTANDO;
-		processador.registradores = atual.registradores;
+		if (escalonador.isProcessoTerminado()) {
+			pcbAtual.estado = PCB.Estado.TERMINADO;
+			terminados.add(pcbAtual);
+		} else if (escalonador.isUltimaOpCPU()) {
+			pcbAtual.estado = PCB.Estado.ESPERANDO;
+			esperando.add(pcbAtual);
+		}
+		Arrays.fill(processador.registradores, 0);
+		escalonador.setAtual(pcbProximo);
+		if (escalonador.getAtual() != null) escalonador.getAtual().estado = PCB.Estado.EXECUTANDO;
+		escalonador.setProcessoTerminado(false);
+		escalonador.setUltimaOpCPU(false);
 	}
-
 	@Override
 	// Assuma que 0 <= idDispositivo <= 4
 	protected OperacaoES proximaOperacaoES(int idDispositivo) {
 		if (opsDispES.isEmpty()) inicializaMap(opsDispES);
-		if (opsDispES.get(idDispositivo).isEmpty()) return null;
-		return opsDispES.get(idDispositivo).get(0);
+		while (true) {
+			if (opsDispES.get(idDispositivo).isEmpty()) return null;
+			OperacaoES op = opsDispES.get(idDispositivo).get(0).getOpES();
+			if (op.ciclos == 0) eliminaPendencia(idDispositivo);
+			else return opsDispES.get(idDispositivo).get(0).getOpES();
+		}
+	}
+
+	protected void eliminaPendencia(int idDispositivo) {
+		PCB pcbAtual = opsDispES.get(idDispositivo).get(0).getPcb();
+		opsDispES.get(idDispositivo).remove(0);
+		pcbAtual.pendencias--;
+		if (pcbAtual.pendencias == 0 && pcbAtual.contadorDePrograma == pcbAtual.codigo.length) {
+			pcbAtual.estado = PCB.Estado.TERMINADO;
+			esperando.remove(pcbAtual);
+			terminados.add(pcbAtual);
+		}
 	}
 
 	@Override
 	protected Operacao proximaOperacaoCPU() {
-		while (atual.contadorDePrograma < atual.codigo.length) {
-			Operacao op = atual.codigo[atual.contadorDePrograma];
-			atual.contadorDePrograma++;
-			if (escalonador.getUltimaOp() || atual.contadorDePrograma == atual.codigo.length) {
-				escalonador.setUltimaOp(true);
-				atual = escalonador.verificaProcesso(prontos, terminados);
-			}
+		if (escalonador.getAtual() == null) return operacaoNula();
+		while (escalonador.getAtual().contadorDePrograma < escalonador.getAtual().codigo.length) {
+			Operacao op = escalonador.getAtual().codigo[escalonador.getAtual().contadorDePrograma];
+			escalonador.getAtual().contadorDePrograma++;
 			if (op instanceof Soma || op instanceof Carrega) return op;
 			else addOperacaoES(op);
 		}
-		return null;
+		return operacaoNula();
+	}
+
+	protected Operacao operacaoNula() {
+		return new Carrega(0,processador.registradores[0]);
 	}
 
 	protected void addOperacaoES(Operacao op) {
 		OperacaoES opES = (OperacaoES) op;
 		if (opsDispES.isEmpty()) inicializaMap(opsDispES);
-		opsDispES.get(opES.idDispositivo).add(opES);
+		escalonador.getAtual().pendencias++;
+		opsDispES.get(opES.idDispositivo).add(new Pendencia(escalonador.getAtual(), opES));
 	}
 
-	protected void inicializaMap(Map<Integer, LinkedList<OperacaoES>> map) {
-		for(int i = 0; i < 5; i++)
-			map.put(i, new LinkedList<OperacaoES>());
+	protected void inicializaMap(Map<Integer, LinkedList<Pendencia>> map) {
+		for(int i = 0; i < 5; i++) map.put(i, new LinkedList<Pendencia>());
 	}
+
 	@Override
 	protected void executaCicloKernel() {
-		atual = escalonador.executaCiclo(novos, prontos, terminados);
-		if (!verificaProx()) escalonador.setUltimaOp(true);
-	}
-
-	public boolean verificaProx() {
-		if (atual.contadorDePrograma >= atual.codigo.length - 1) return false;
-		for(int i = atual.contadorDePrograma+1; i < atual.codigo.length; i++)
-			if (atual.codigo[i] instanceof Soma || atual.codigo[i] instanceof Carrega) return true;
-		for(int i = atual.contadorDePrograma+1; i < atual.codigo.length; i++)
-			addOperacaoES(atual.codigo[i]);
-		return false;
+		escalonador.executaCiclo(novos, prontos, terminados);
+		if (escalonador.getAtual() != null) {
+			if (escalonador.getAtual().contadorDePrograma == escalonador.getAtual().codigo.length && escalonador.getAtual().pendencias == 0)
+				escalonador.setProcessoTerminado(true);
+			escalonador.verificaOpCPU();
+			if (escalonador.getAtual().contadorDePrograma == escalonador.getAtual().codigo.length) {
+				prontos.remove(escalonador.getAtual());
+				trocaContexto(escalonador.getAtual(), escalonador.escolheProximo(prontos));
+			}
+		}
 	}
 
 	@Override
 	protected boolean temTarefasPendentes() {
-		return !prontos.isEmpty() || !novos.isEmpty();//esperando
+		return !prontos.isEmpty() || !novos.isEmpty() || !esperando.isEmpty();
 	}
 
 	@Override
@@ -105,14 +125,15 @@ public class SeuSO extends SO {
 
 	@Override
 	protected Integer idProcessoExecutando() {
-		if (atual == null) return null;
-		return atual.idProcesso;
+		if (escalonador.getAtual() == null) return null;
+		return escalonador.getAtual().idProcesso;
 	}
 
 	@Override
 	protected List<Integer> idProcessosEsperando() {
 		List<Integer> ie = new LinkedList<>();
 		for (PCB pcb : esperando) ie.add(pcb.idProcesso);
+		Collections.sort(ie);
 		return ie;
 	}
 
@@ -120,6 +141,7 @@ public class SeuSO extends SO {
 	protected List<Integer> idProcessosTerminados() {
 		List<Integer> it = new LinkedList<>();
 		for (PCB pcb : terminados) it.add(pcb.idProcesso);
+		Collections.sort(it);
 		return it;
 	}
 

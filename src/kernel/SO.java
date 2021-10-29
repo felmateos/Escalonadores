@@ -89,8 +89,6 @@ public abstract class SO {
 
 	private void executaUmCicloCPU() {
 		Operacao op = proximaOperacaoCPU();
-        //if (op instanceof Soma) System.out.println("\nSOMA");//////////
-        //if (op instanceof Carrega) System.out.println("\nCARREGA");//////////
 		processador.executa(op);
 	}
 

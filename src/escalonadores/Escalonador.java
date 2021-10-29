@@ -5,17 +5,14 @@ import java.util.*;
 
 public abstract class Escalonador {
     private PCB atual;
-    private boolean ultimaOp = false;
+    private boolean ultimaOpCPU = false;
+    private boolean processoTerminado = false;
 
-    public PCB executaCiclo(List<PCB> novos, List<PCB> prontos, List<PCB> terminados){
-        return null;
-    }
+    public void executaCiclo(List<PCB> novos, List<PCB> prontos, List<PCB> terminados){}
 
-    public PCB verificaProcesso(List<PCB> prontos, List<PCB> terminados){
-        return null;
-    }
+    public void verificaOpCPU() {}
 
-    public PCB escolheProximo(List<PCB> prontos, List<PCB> terminados) {
+    public PCB escolheProximo(List<PCB> prontos) {
         return null;
     }
 
@@ -27,11 +24,19 @@ public abstract class Escalonador {
         this.atual = atual;
     }
 
-    public boolean getUltimaOp() {
-        return ultimaOp;
+    public boolean isUltimaOpCPU() {
+        return ultimaOpCPU;
     }
 
-    public void setUltimaOp(boolean ultimaOp) {
-        this.ultimaOp = ultimaOp;
+    public void setUltimaOpCPU(boolean ultimaOpCPU) {
+        this.ultimaOpCPU = ultimaOpCPU;
+    }
+
+    public boolean isProcessoTerminado() {
+        return processoTerminado;
+    }
+
+    public void setProcessoTerminado(boolean troca) {
+        this.processoTerminado = troca;
     }
 }
