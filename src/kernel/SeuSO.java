@@ -57,10 +57,10 @@ public class SeuSO extends SO {
 		PCB pcbAtual = opsDispES.get(idDispositivo).get(0).getPcb();
 		opsDispES.get(idDispositivo).remove(0);
 		pcbAtual.pendencias--;
-		if (pcbAtual.pendencias == 0 && pcbAtual.contadorDePrograma == pcbAtual.codigo.length) {
+		if (pcbAtual.pendencias == 0 && pcbAtual.estado == PCB.Estado.ESPERANDO && pcbAtual.contadorDePrograma == pcbAtual.codigo.length) {
 			pcbAtual.estado = PCB.Estado.TERMINADO;
 			esperando.remove(pcbAtual);
-			terminados.add(pcbAtual);
+			if (!terminados.contains(pcbAtual)) terminados.add(pcbAtual);
 		}
 	}
 
