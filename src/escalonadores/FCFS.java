@@ -19,21 +19,4 @@ public class FCFS extends Escalonador {
         }
         if (super.getAtual() == null && !prontos.isEmpty()) super.setAtual(prontos.get(0));
     }
-
-    @Override
-    public void verificaOpCPU() {
-        for(int i = super.getAtual().contadorDePrograma; i < super.getAtual().codigo.length; i++) {
-            if (super.getAtual().codigo[i] instanceof Soma || super.getAtual().codigo[i] instanceof Carrega) {
-                super.setUltimaOpCPU(false);
-                return;
-            }
-        }
-        super.setUltimaOpCPU(true);
-    }
-
-    @Override
-    public PCB escolheProximo(List<PCB> prontos) {
-        if (!prontos.isEmpty()) return prontos.get(0);
-        return null;
-    }
 }

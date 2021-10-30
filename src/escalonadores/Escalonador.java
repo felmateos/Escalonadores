@@ -1,6 +1,9 @@
 package escalonadores;
 
 import kernel.*;
+import operacoes.Carrega;
+import operacoes.Soma;
+
 import java.util.*;
 
 public abstract class Escalonador {
@@ -10,9 +13,18 @@ public abstract class Escalonador {
 
     public void executaCiclo(List<PCB> novos, List<PCB> prontos, List<PCB> terminados){}
 
-    public void verificaOpCPU() {}
+    public void verificaOpCPU() {
+        for(int i = atual.contadorDePrograma; i < atual.codigo.length; i++) {
+            if (atual.codigo[i] instanceof Soma || atual.codigo[i] instanceof Carrega) {
+                ultimaOpCPU = false;
+                return;
+            }
+        }
+        ultimaOpCPU = true;
+    }
 
     public PCB escolheProximo(List<PCB> prontos) {
+        if (!prontos.isEmpty()) return prontos.get(0);
         return null;
     }
 

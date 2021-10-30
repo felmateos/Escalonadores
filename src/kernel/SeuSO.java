@@ -28,10 +28,10 @@ public class SeuSO extends SO {
 	@Override
 	protected void trocaContexto(PCB pcbAtual, PCB pcbProximo) {
 		pcbAtual.registradores = processador.registradores;
-		if (escalonador.isProcessoTerminado()) {
+		if (escalonador.isProcessoTerminado() && escalonador.getAtual().idProcesso != -1) {
 			pcbAtual.estado = PCB.Estado.TERMINADO;
 			terminados.add(pcbAtual);
-		} else if (escalonador.isUltimaOpCPU()) {
+		} else if (escalonador.isUltimaOpCPU() && escalonador.getAtual().idProcesso != -1) {
 			pcbAtual.estado = PCB.Estado.ESPERANDO;
 			esperando.add(pcbAtual);
 		}
@@ -93,16 +93,27 @@ public class SeuSO extends SO {
 
 	@Override
 	protected void executaCicloKernel() {
-		escalonador.executaCiclo(novos, prontos, terminados);
-		if (escalonador.getAtual() != null) {
-			if (escalonador.getAtual().contadorDePrograma == escalonador.getAtual().codigo.length && escalonador.getAtual().pendencias == 0)
-				escalonador.setProcessoTerminado(true);
-			escalonador.verificaOpCPU();
-			if (escalonador.getAtual().contadorDePrograma == escalonador.getAtual().codigo.length) {
-				prontos.remove(escalonador.getAtual());
-				trocaContexto(escalonador.getAtual(), escalonador.escolheProximo(prontos));
+		if (novos.size() == 1 && prontos.isEmpty() && esperando.isEmpty() && terminados.isEmpty())
+			escalonador.setAtual(processoNulo());
+		else {
+			escalonador.executaCiclo(novos, prontos, terminados);
+			if (escalonador.getAtual() != null) {
+				escalonador.verificaOpCPU();
+				if (escalonador.getAtual().contadorDePrograma == escalonador.getAtual().codigo.length) {
+					if (escalonador.getAtual().pendencias == 0) escalonador.setProcessoTerminado(true);
+					prontos.remove(escalonador.getAtual());
+					trocaContexto(escalonador.getAtual(), escalonador.escolheProximo(prontos));
+				}
 			}
 		}
+	}
+
+	public PCB processoNulo() {
+		PCB nulo = new PCB();
+		nulo.idProcesso = -1;
+		nulo.codigo = new Operacao[1];
+		nulo.codigo[0] = operacaoNula();
+		return nulo;
 	}
 
 	@Override
@@ -125,7 +136,7 @@ public class SeuSO extends SO {
 
 	@Override
 	protected Integer idProcessoExecutando() {
-		if (escalonador.getAtual() == null) return null;
+		if (escalonador.getAtual() == null || escalonador.getAtual().idProcesso == -1) return null;
 		return escalonador.getAtual().idProcesso;
 	}
 
@@ -180,7 +191,7 @@ public class SeuSO extends SO {
 			case FIRST_COME_FIRST_SERVED -> this.escalonador = new FCFS();//////////
 			case SHORTEST_JOB_FIRST -> this.escalonador = new FCFS();//////////
 			case SHORTEST_REMANING_TIME_FIRST -> this.escalonador = new FCFS();//////////
-			case ROUND_ROBIN_QUANTUM_5 -> this.escalonador = new FCFS();//////////
+			case ROUND_ROBIN_QUANTUM_5 -> this.escalonador = new RRQF();//////////
 			default -> throw new RuntimeException("Escalonador inválido.");
 		}
 	}
