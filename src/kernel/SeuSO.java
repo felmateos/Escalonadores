@@ -10,81 +10,74 @@ public class SeuSO extends SO {
 	private List<PCB> prontos = new LinkedList<>();
 	private List<PCB> esperando = new LinkedList<>();
 	private List<PCB> terminados = new LinkedList<>();
-	private Map<Integer, LinkedList<Pendencia>> opsDispES = new TreeMap<>();
-	private Escalonador e;
+	private Map<Integer, LinkedList<Pendencia>> listaES = new TreeMap<>();
 	private int pCount = 0;
 
 	@Override
-	// ATENCÃO: cria o processo mas o mesmo
-	// só estará "pronto" no próximo ciclo
 	protected void criaProcesso(Operacao[] codigo) {
 		PCB pcb = new PCB();
 		pcb.codigo = codigo;
 		pcb.idProcesso = pCount;
-		pCount++;
 		novos.add(pcb);
+		pCount++;
 	}
 
 	@Override
 	protected void trocaContexto(PCB pcbAtual, PCB pcbProximo) {
 		pcbAtual.registradores = processador.registradores;
-		if (escalonador.isProcessoTerminado() && escalonador.getAtual().idProcesso != -1) {
-			pcbAtual.estado = PCB.Estado.TERMINADO;
-			terminados.add(pcbAtual);
-		} else if (escalonador.isUltimaOpCPU() && escalonador.getAtual().idProcesso != -1) {
-			pcbAtual.estado = PCB.Estado.ESPERANDO;
-			esperando.add(pcbAtual);
-		}
 		Arrays.fill(processador.registradores, 0);
-		escalonador.setAtual(pcbProximo);
-		if (escalonador.getAtual() != null) escalonador.getAtual().estado = PCB.Estado.EXECUTANDO;
-		escalonador.setProcessoTerminado(false);
-		escalonador.setUltimaOpCPU(false);
-	}
-	@Override
-	// Assuma que 0 <= idDispositivo <= 4
-	protected OperacaoES proximaOperacaoES(int idDispositivo) {
-		if (opsDispES.isEmpty()) inicializaMap(opsDispES);
-		while (true) {
-			if (opsDispES.get(idDispositivo).isEmpty()) return null;
-			OperacaoES op = opsDispES.get(idDispositivo).get(0).getOpES();
-			if (op.ciclos == 0) eliminaPendencia(idDispositivo);
-			else return opsDispES.get(idDispositivo).get(0).getOpES();
+		prontos.remove(pcbAtual);
+		if (escalonador.isProcessoTerminado() && escalonador.getAtual().idProcesso != -1) {
+			terminados.add(pcbAtual);
+			pcbAtual.estado = PCB.Estado.TERMINADO;
+			escalonador.setProcessoTerminado(false);
+		} else if (!escalonador.isOpCPU() && escalonador.getAtual().idProcesso != -1) {
+			esperando.add(pcbAtual);
+			pcbAtual.estado = PCB.Estado.ESPERANDO;
+			adicionaOperacaoES(pcbAtual);
 		}
+		escalonador.setAtual(processoNulo());
+		if (pcbProximo != null) escalonador.setAtual(pcbProximo);
 	}
 
-	protected void eliminaPendencia(int idDispositivo) {
-		PCB pcbAtual = opsDispES.get(idDispositivo).get(0).getPcb();
-		opsDispES.get(idDispositivo).remove(0);
-		pcbAtual.pendencias--;
-		if (pcbAtual.pendencias == 0 && pcbAtual.estado == PCB.Estado.ESPERANDO && pcbAtual.contadorDePrograma == pcbAtual.codigo.length) {
-			pcbAtual.estado = PCB.Estado.TERMINADO;
-			esperando.remove(pcbAtual);
-			if (!terminados.contains(pcbAtual)) terminados.add(pcbAtual);
-		}
+	@Override
+	protected OperacaoES proximaOperacaoES(int idDispositivo) {
+		if (listaES.isEmpty()) return null;
+		if (listaES.get(idDispositivo).isEmpty()) return null;
+		Pendencia pendencia = listaES.get(idDispositivo).get(0);
+		if (pendencia.getOpES().ciclos == 0) eliminaPendencia(idDispositivo, pendencia);
+		if (!listaES.get(idDispositivo).isEmpty()) return listaES.get(idDispositivo).get(0).getOpES();
+		return null;
+	}
+
+	protected void eliminaPendencia(int idDispositivo, Pendencia pendencia) {
+		PCB pcb = pendencia.getPcb();
+		listaES.get(idDispositivo).remove(pendencia);
+		esperando.remove(pcb);
+		pcb.contadorDePrograma++;
+		if (pcb.contadorDePrograma == pcb.codigo.length) {
+			pcb.estado = PCB.Estado.TERMINADO;
+			terminados.add(pendencia.getPcb());
+		} else if (pcb.codigo[pcb.contadorDePrograma] instanceof OperacaoES) {
+				adicionaOperacaoES(pcb);
+				} else {
+					pcb.estado = PCB.Estado.PRONTO;
+					prontos.add(pcb);
+				}
+	}
+
+	protected void adicionaOperacaoES(PCB pcb) {
+		OperacaoES opES = (OperacaoES) pcb.codigo[pcb.contadorDePrograma];
+		if (listaES.isEmpty()) inicializaMap(listaES);
+		listaES.get(opES.idDispositivo).add(new Pendencia(pcb, opES));
 	}
 
 	@Override
 	protected Operacao proximaOperacaoCPU() {
 		if (escalonador.getAtual() == null) return operacaoNula();
-		while (escalonador.getAtual().contadorDePrograma < escalonador.getAtual().codigo.length) {
-			Operacao op = escalonador.getAtual().codigo[escalonador.getAtual().contadorDePrograma];
-			escalonador.getAtual().contadorDePrograma++;
-			if (op instanceof Soma || op instanceof Carrega) return op;
-			else addOperacaoES(op);
-		}
-		return operacaoNula();
-	}
-
-	protected Operacao operacaoNula() {
-		return new Carrega(0,processador.registradores[0]);
-	}
-
-	protected void addOperacaoES(Operacao op) {
-		OperacaoES opES = (OperacaoES) op;
-		if (opsDispES.isEmpty()) inicializaMap(opsDispES);
-		escalonador.getAtual().pendencias++;
-		opsDispES.get(opES.idDispositivo).add(new Pendencia(escalonador.getAtual(), opES));
+		Operacao op = escalonador.getAtual().codigo[escalonador.getAtual().contadorDePrograma];
+		escalonador.getAtual().contadorDePrograma++;
+		return op;
 	}
 
 	protected void inicializaMap(Map<Integer, LinkedList<Pendencia>> map) {
@@ -93,19 +86,27 @@ public class SeuSO extends SO {
 
 	@Override
 	protected void executaCicloKernel() {
-		if (novos.size() == 1 && prontos.isEmpty() && esperando.isEmpty() && terminados.isEmpty())
+		if (prontos.size() == 0 && esperando.size() == 0 && terminados.size() == 0)
 			escalonador.setAtual(processoNulo());
-		else {
-			escalonador.executaCiclo(novos, prontos, terminados);
-			if (escalonador.getAtual() != null) {
-				escalonador.verificaOpCPU();
-				if (escalonador.getAtual().contadorDePrograma == escalonador.getAtual().codigo.length) {
-					if (escalonador.getAtual().pendencias == 0) escalonador.setProcessoTerminado(true);
-					prontos.remove(escalonador.getAtual());
-					trocaContexto(escalonador.getAtual(), escalonador.escolheProximo(prontos));
-				}
-			}
+		escalonador.executaCiclo();
+        if (pCount > 1) atualizaEstado();
+		if (escalonador.isProcessoTerminado() || !escalonador.isOpCPU()) {
+			prontos.remove(escalonador.getAtual());
+			trocaContexto(escalonador.getAtual(), escalonador.escolheProximo(prontos));
 		}
+	}
+
+	public void atualizaEstado() {
+		if (novos.isEmpty()) return;
+		if (novos.get(0).codigo[0] instanceof Soma || novos.get(0).codigo[0] instanceof Carrega) {
+			novos.get(0).estado = PCB.Estado.PRONTO;
+			prontos.add(novos.get(0));
+		} else {
+			novos.get(0).estado = PCB.Estado.ESPERANDO;
+			esperando.add(novos.get(0));
+			adicionaOperacaoES(novos.get(0));
+		}
+		novos.remove(novos.get(0));
 	}
 
 	public PCB processoNulo() {
@@ -116,22 +117,26 @@ public class SeuSO extends SO {
 		return nulo;
 	}
 
+	protected Operacao operacaoNula() {
+		return new Carrega(0, processador.registradores[0]);
+	}
+
 	@Override
 	protected boolean temTarefasPendentes() {
-		return !prontos.isEmpty() || !novos.isEmpty() || !esperando.isEmpty();
+		return !novos.isEmpty() || !prontos.isEmpty() || !esperando.isEmpty();
 	}
 
 	@Override
 	protected Integer idProcessoNovo() {
 		if (novos.isEmpty()) return null;
-		return novos.get(novos.size()-1).idProcesso;
+		return novos.get(0).idProcesso;
 	}
 
 	@Override
 	protected List<Integer> idProcessosProntos() {
-		List<Integer> ipp = new LinkedList<>();
-		for (PCB p : prontos) ipp.add(p.idProcesso);
-		return ipp;
+		List<Integer> ip = new LinkedList<>();
+		for (PCB p : prontos) ip.add(p.idProcesso);
+		return ip;
 	}
 
 	@Override
@@ -157,36 +162,33 @@ public class SeuSO extends SO {
 	}
 
 	@Override
-	protected int tempoEsperaMedio() {
-		// TODO Auto-generated method stub
+	protected int tempoEsperaMedio() { //Tempo que ficou em espera
+		return 0;
+		/*int somaEspera = 0;
+		for(int te : tEspera) {
+			System.out.println(te);
+			somaEspera += te;
+		}
+		return somaEspera/tEspera.size();///metodo de media de listas em geral!!!*/
+	}
+
+	@Override
+	protected int tempoRespostaMedio() { //Tempo para a 1a execucao
 		return 0;
 	}
 
 	@Override
-	protected int tempoRespostaMedio() {
-		// TODO Auto-generated method stub
+	protected int tempoRetornoMedio() { //Termino - Inicio
 		return 0;
 	}
 
 	@Override
-	protected int tempoRetornoMedio() {
-		// TODO Auto-generated method stub
-		return 0;
-	}
-
-	@Override
-	protected int trocasContexto() {
-		// TODO Auto-generated method stub
+	protected int trocasContexto() { //Trocas de contexto
 		return 0;
 	}
 
 	@Override
 	public void defineEscalonador(Escalonador e) {
-		this.e = e;
-		criaEscalonador();
-	}
-
-	protected void criaEscalonador() {
 		switch (e) {
 			case FIRST_COME_FIRST_SERVED -> this.escalonador = new FCFS();//////////
 			case SHORTEST_JOB_FIRST -> this.escalonador = new FCFS();//////////

@@ -8,5 +8,4 @@ public class PCB{
 	public int[] registradores = new int[5];
 	public int contadorDePrograma = 0;
 	public Operacao[] codigo;
-	int pendencias = 0;
 }
