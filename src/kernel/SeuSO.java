@@ -12,6 +12,10 @@ public class SeuSO extends SO {
 	private List<PCB> terminados = new LinkedList<>();
 	private Map<Integer, LinkedList<Pendencia>> listaES = new TreeMap<>();
 	private int pCount = 0;
+	private int tContexto = 0;
+	private Map<Integer, Integer> tempoEspera = new TreeMap<>();
+	private Map<Integer, Integer> tempoResposta = new TreeMap<>();
+	private Map<Integer, Integer> tempoRetorno = new TreeMap<>();
 
 	@Override
 	protected void criaProcesso(Operacao[] codigo) {
@@ -24,6 +28,7 @@ public class SeuSO extends SO {
 
 	@Override
 	protected void trocaContexto(PCB pcbAtual, PCB pcbProximo) {
+		tContexto++;
 		pcbAtual.registradores = processador.registradores;
 		Arrays.fill(processador.registradores, 0);
 		prontos.remove(pcbAtual);
@@ -38,6 +43,8 @@ public class SeuSO extends SO {
 		}
 		escalonador.setAtual(processoNulo());
 		if (pcbProximo != null) escalonador.setAtual(pcbProximo);
+		escalonador.getAtual().estado = PCB.Estado.EXECUTANDO;
+		escalonador.getAtual().respondeu = true;
 	}
 
 	@Override
@@ -58,9 +65,8 @@ public class SeuSO extends SO {
 		if (pcb.contadorDePrograma == pcb.codigo.length) {
 			pcb.estado = PCB.Estado.TERMINADO;
 			terminados.add(pendencia.getPcb());
-		} else if (pcb.codigo[pcb.contadorDePrograma] instanceof OperacaoES) {
-				adicionaOperacaoES(pcb);
-				} else {
+		} else if (pcb.codigo[pcb.contadorDePrograma] instanceof OperacaoES) adicionaOperacaoES(pcb);
+				else {
 					pcb.estado = PCB.Estado.PRONTO;
 					prontos.add(pcb);
 				}
@@ -86,13 +92,29 @@ public class SeuSO extends SO {
 
 	@Override
 	protected void executaCicloKernel() {
-		if (prontos.size() == 0 && esperando.size() == 0 && terminados.size() == 0)
+		atualizaEstatistica();
+		if (prontos.isEmpty() && esperando.isEmpty() && terminados.isEmpty())
 			escalonador.setAtual(processoNulo());
 		escalonador.executaCiclo();
         if (pCount > 1) atualizaEstado();
 		if (escalonador.isProcessoTerminado() || !escalonador.isOpCPU()) {
 			prontos.remove(escalonador.getAtual());
 			trocaContexto(escalonador.getAtual(), escalonador.escolheProximo(prontos));
+		}
+	}
+
+	protected void atualizaEstatistica() {
+		for (PCB pcb : esperando) {
+			if (tempoEspera.putIfAbsent(pcb.idProcesso, 0) != null)
+				tempoEspera.put(pcb.idProcesso, tempoEspera.get(pcb.idProcesso) + 1);
+			if (tempoRetorno.putIfAbsent(pcb.idProcesso, 0) != null)
+				tempoRetorno.put(pcb.idProcesso, tempoRetorno.get(pcb.idProcesso) + 1);
+		}
+		for (PCB pcb : prontos) {
+			if (tempoResposta.putIfAbsent(pcb.idProcesso, 0) != null && !pcb.respondeu)
+				tempoResposta.put(pcb.idProcesso, tempoResposta.get(pcb.idProcesso) + 1);
+			if (tempoRetorno.putIfAbsent(pcb.idProcesso, 0) != null && !pcb.respondeu)
+				tempoRetorno.put(pcb.idProcesso, tempoRetorno.get(pcb.idProcesso) + 1);
 		}
 	}
 
@@ -128,14 +150,14 @@ public class SeuSO extends SO {
 
 	@Override
 	protected Integer idProcessoNovo() {
-		if (novos.isEmpty()) return null;
-		return novos.get(0).idProcesso;
+		return novos.isEmpty() ? null : novos.get(0).idProcesso;
 	}
 
 	@Override
 	protected List<Integer> idProcessosProntos() {
 		List<Integer> ip = new LinkedList<>();
 		for (PCB p : prontos) ip.add(p.idProcesso);
+		Collections.sort(ip);
 		return ip;
 	}
 
@@ -163,28 +185,28 @@ public class SeuSO extends SO {
 
 	@Override
 	protected int tempoEsperaMedio() { //Tempo que ficou em espera
-		return 0;
-		/*int somaEspera = 0;
-		for(int te : tEspera) {
-			System.out.println(te);
-			somaEspera += te;
-		}
-		return somaEspera/tEspera.size();///metodo de media de listas em geral!!!*/
+		return fazMedia(tempoEspera);
 	}
 
 	@Override
 	protected int tempoRespostaMedio() { //Tempo para a 1a execucao
-		return 0;
+		return fazMedia(tempoResposta);
 	}
 
 	@Override
 	protected int tempoRetornoMedio() { //Termino - Inicio
-		return 0;
+		return fazMedia(tempoRetorno);
 	}
 
 	@Override
 	protected int trocasContexto() { //Trocas de contexto
-		return 0;
+		return tContexto;
+	}
+
+	protected int fazMedia(Map<Integer, Integer> map) {
+		int somaTotal = 0;
+		for (Integer i : map.keySet()) somaTotal += map.get(i);
+		return somaTotal/map.keySet().size();
 	}
 
 	@Override
