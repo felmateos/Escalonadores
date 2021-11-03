@@ -1,12 +1,9 @@
 package escalonadores;
 
 import kernel.*;
-import operacoes.Carrega;
-import operacoes.Soma;
-
+import operacoes.*;
 import java.util.*;
 
 public class FCFS extends Escalonador {
     public FCFS(){}
-
 }

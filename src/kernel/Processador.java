@@ -16,7 +16,6 @@ public class Processador {
 			int a = registradores[s.registradorParcela1];
 			int b = registradores[s.registradorParcela2]; 
 			registradores[s.registradorTotal] = a + b;
-			System.out.println("  SOMAAAA: " + registradores[s.registradorTotal]);///////////
 		} else {
 			throw new RuntimeException("Operacão Inválida");
 		}

@@ -18,7 +18,7 @@ public class Main {
 		for(Escalonador esc : escalonadores) {
 			SO so = new SeuSO();
 			so.defineEscalonador(esc);
-			so.leArquivoEntrada("C:\\Users\\Acer\\IdeaProjects\\Escalonadores\\src\\entradas\\teste3.txt");
+			so.leArquivoEntrada("C:\\Users\\Acer\\IdeaProjects\\Escalonadores\\src\\entradas\\teste1.txt");
 			so.simula();
 		}
 	}

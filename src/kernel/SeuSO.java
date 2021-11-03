@@ -1,21 +1,21 @@
 package kernel;
-import java.util.*;
 
+import java.util.*;
 import operacoes.*;
 import escalonadores.*;
 
-public class SeuSO extends SO {
+public class SeuSO extends SO {//////////DAR UM NOME PRO GAROTAO
 	escalonadores.Escalonador escalonador;
 	private List<PCB> novos = new LinkedList<>();
 	private List<PCB> prontos = new LinkedList<>();
 	private List<PCB> esperando = new LinkedList<>();
 	private List<PCB> terminados = new LinkedList<>();
-	private Map<Integer, LinkedList<Pendencia>> listaES = new TreeMap<>();
-	private int pCount = 0;
-	private int tContexto = 0;
 	private Map<Integer, Integer> tempoEspera = new TreeMap<>();
 	private Map<Integer, Integer> tempoResposta = new TreeMap<>();
 	private Map<Integer, Integer> tempoRetorno = new TreeMap<>();
+	private Map<Integer, LinkedList<Pendencia>> listaES = new TreeMap<>();
+	private int pCount = 0;
+	private int tContexto = 0;
 
 	@Override
 	protected void criaProcesso(Operacao[] codigo) {
@@ -36,11 +36,12 @@ public class SeuSO extends SO {
 			terminados.add(pcbAtual);
 			pcbAtual.estado = PCB.Estado.TERMINADO;
 			escalonador.setProcessoTerminado(false);
-		} else if (!escalonador.isOpCPU() && escalonador.getAtual().idProcesso != -1) {
+		} else if (escalonador.isOpES() && escalonador.getAtual().idProcesso != -1) {
 			esperando.add(pcbAtual);
 			pcbAtual.estado = PCB.Estado.ESPERANDO;
 			adicionaOperacaoES(pcbAtual);
-		}
+		} else if (escalonador.isTrocaProcesso() && escalonador.getAtual().idProcesso != -1) prontos.add(pcbAtual);
+		Collections.sort(prontos);////presumo q tenha q ordenar
 		escalonador.setAtual(processoNulo());
 		if (pcbProximo != null) escalonador.setAtual(pcbProximo);
 		escalonador.getAtual().estado = PCB.Estado.EXECUTANDO;
@@ -66,10 +67,11 @@ public class SeuSO extends SO {
 			pcb.estado = PCB.Estado.TERMINADO;
 			terminados.add(pendencia.getPcb());
 		} else if (pcb.codigo[pcb.contadorDePrograma] instanceof OperacaoES) adicionaOperacaoES(pcb);
-				else {
-					pcb.estado = PCB.Estado.PRONTO;
-					prontos.add(pcb);
-				}
+		else {
+			pcb.estado = PCB.Estado.PRONTO;
+			prontos.add(pcb);
+			Collections.sort(prontos);////presumo q tenha q ordenar
+		}
 	}
 
 	protected void adicionaOperacaoES(PCB pcb) {
@@ -83,6 +85,7 @@ public class SeuSO extends SO {
 		if (escalonador.getAtual() == null) return operacaoNula();
 		Operacao op = escalonador.getAtual().codigo[escalonador.getAtual().contadorDePrograma];
 		escalonador.getAtual().contadorDePrograma++;
+		escalonador.getAtual().burstAtual = escalonador.getAtual().burstAtual + 1;
 		return op;
 	}
 
@@ -95,22 +98,21 @@ public class SeuSO extends SO {
 		atualizaEstatistica();
 		if (prontos.isEmpty() && esperando.isEmpty() && terminados.isEmpty())
 			escalonador.setAtual(processoNulo());
-		escalonador.executaCiclo();
-        if (pCount > 1) atualizaEstado();
-		if (escalonador.isProcessoTerminado() || !escalonador.isOpCPU()) {
+		escalonador.executaCiclo(prontos);
+		if (pCount > 1) atualizaEstado();
+		if (escalonador.isProcessoTerminado() || escalonador.isOpES() || escalonador.isTrocaProcesso()) {
 			prontos.remove(escalonador.getAtual());
 			trocaContexto(escalonador.getAtual(), escalonador.escolheProximo(prontos));
 		}
 	}
 
 	protected void atualizaEstatistica() {
-		for (PCB pcb : esperando) {
-			if (tempoEspera.putIfAbsent(pcb.idProcesso, 0) != null)
-				tempoEspera.put(pcb.idProcesso, tempoEspera.get(pcb.idProcesso) + 1);
+		for (PCB pcb : esperando)
 			if (tempoRetorno.putIfAbsent(pcb.idProcesso, 0) != null)
 				tempoRetorno.put(pcb.idProcesso, tempoRetorno.get(pcb.idProcesso) + 1);
-		}
 		for (PCB pcb : prontos) {
+			if (tempoEspera.putIfAbsent(pcb.idProcesso, 0) != null && pcb.estado != PCB.Estado.EXECUTANDO)
+				tempoEspera.put(pcb.idProcesso, tempoEspera.get(pcb.idProcesso) + 1);
 			if (tempoResposta.putIfAbsent(pcb.idProcesso, 0) != null && !pcb.respondeu)
 				tempoResposta.put(pcb.idProcesso, tempoResposta.get(pcb.idProcesso) + 1);
 			if (tempoRetorno.putIfAbsent(pcb.idProcesso, 0) != null && !pcb.respondeu)
@@ -157,7 +159,7 @@ public class SeuSO extends SO {
 	protected List<Integer> idProcessosProntos() {
 		List<Integer> ip = new LinkedList<>();
 		for (PCB p : prontos) ip.add(p.idProcesso);
-		Collections.sort(ip);
+		//Collections.sort(ip);
 		return ip;
 	}
 
@@ -212,10 +214,10 @@ public class SeuSO extends SO {
 	@Override
 	public void defineEscalonador(Escalonador e) {
 		switch (e) {
-			case FIRST_COME_FIRST_SERVED -> this.escalonador = new FCFS();//////////
-			case SHORTEST_JOB_FIRST -> this.escalonador = new FCFS();//////////
-			case SHORTEST_REMANING_TIME_FIRST -> this.escalonador = new FCFS();//////////
-			case ROUND_ROBIN_QUANTUM_5 -> this.escalonador = new RRQF();//////////
+			case FIRST_COME_FIRST_SERVED -> this.escalonador = new FCFS();
+			case SHORTEST_JOB_FIRST -> this.escalonador = new SJF();
+			case SHORTEST_REMANING_TIME_FIRST -> this.escalonador = new SRTF();
+			case ROUND_ROBIN_QUANTUM_5 -> this.escalonador = new RRQF();
 			default -> throw new RuntimeException("Escalonador inválido.");
 		}
 	}
