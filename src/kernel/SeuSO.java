@@ -30,7 +30,6 @@ public class SeuSO extends SO {//////////DAR UM NOME PRO GAROTAO
 	protected void trocaContexto(PCB pcbAtual, PCB pcbProximo) {
 		tContexto++;
 		pcbAtual.registradores = processador.registradores;
-		Arrays.fill(processador.registradores, 0);
 		prontos.remove(pcbAtual);
 		if (escalonador.isProcessoTerminado() && escalonador.getAtual().idProcesso != -1) {
 			terminados.add(pcbAtual);
@@ -40,10 +39,14 @@ public class SeuSO extends SO {//////////DAR UM NOME PRO GAROTAO
 			esperando.add(pcbAtual);
 			pcbAtual.estado = PCB.Estado.ESPERANDO;
 			adicionaOperacaoES(pcbAtual);
-		} else if (escalonador.isTrocaProcesso() && escalonador.getAtual().idProcesso != -1) prontos.add(pcbAtual);
+		} else if (escalonador.isTrocaProcesso() && escalonador.getAtual().idProcesso != -1) {
+			prontos.add(pcbAtual);
+			pcbAtual.estado = PCB.Estado.PRONTO;
+		}
 		Collections.sort(prontos);////presumo q tenha q ordenar
 		escalonador.setAtual(processoNulo());
 		if (pcbProximo != null) escalonador.setAtual(pcbProximo);
+		processador.registradores = pcbAtual.registradores;
 		escalonador.getAtual().estado = PCB.Estado.EXECUTANDO;
 		escalonador.getAtual().respondeu = true;
 	}
@@ -85,7 +88,7 @@ public class SeuSO extends SO {//////////DAR UM NOME PRO GAROTAO
 		if (escalonador.getAtual() == null) return operacaoNula();
 		Operacao op = escalonador.getAtual().codigo[escalonador.getAtual().contadorDePrograma];
 		escalonador.getAtual().contadorDePrograma++;
-		escalonador.getAtual().burstAtual = escalonador.getAtual().burstAtual + 1;
+		//escalonador.getAtual().burstAtual++;//agr ta no sjf (aparentemente ta de boa)
 		return op;
 	}
 
@@ -95,9 +98,8 @@ public class SeuSO extends SO {//////////DAR UM NOME PRO GAROTAO
 
 	@Override
 	protected void executaCicloKernel() {
-		atualizaEstatistica();
-		if (prontos.isEmpty() && esperando.isEmpty() && terminados.isEmpty())
-			escalonador.setAtual(processoNulo());
+		atualizaEstatistica();//tvz colocar abaixo do executaCiclo
+		if (prontos.isEmpty() && esperando.isEmpty() && terminados.isEmpty()) escalonador.setAtual(processoNulo());
 		escalonador.executaCiclo(prontos);
 		if (pCount > 1) atualizaEstado();
 		if (escalonador.isProcessoTerminado() || escalonador.isOpES() || escalonador.isTrocaProcesso()) {

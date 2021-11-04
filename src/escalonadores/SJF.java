@@ -8,17 +8,18 @@ public class SJF extends Escalonador{
 
     @Override
     public void executaCiclo(List<PCB> prontos) {
-        if (super.getAtual().contadorDePrograma == super.getAtual().codigo.length) setProcessoTerminado(true);
+        if (getAtual().contadorDePrograma == getAtual().codigo.length) setProcessoTerminado(true);
         else {
             setProcessoTerminado(false);
-            Operacao op = super.getAtual().codigo[super.getAtual().contadorDePrograma];
+            Operacao op = getAtual().codigo[getAtual().contadorDePrograma];
             setOpES(op instanceof OperacaoES);
+            if (!isOpES()) getAtual().burstAtual++;
         }
     }
 
     @Override
     public PCB escolheProximo(List<PCB> prontos) {
-        super.getAtual().mudaEstimativa();
+        getAtual().atualizaEstimativa();
         PCB menorBurst = null;
         for (PCB pcb : prontos) {
             if (pcb.estado != PCB.Estado.EXECUTANDO) {

@@ -11,15 +11,16 @@ public class PCB implements Comparable<PCB>{
 	public boolean respondeu = false;
 	public int estimativa = 5;
 	public int burstAtual = 0;
+	public int tempoRestEstimado = estimativa;
 
 	@Override
 	public int compareTo(PCB outro) {
 		return Integer.compare(this.idProcesso, outro.idProcesso);
 	}
 
-	public void mudaEstimativa() {
+	public void atualizaEstimativa() {
 		estimativa = (estimativa + burstAtual) / 2;
+		tempoRestEstimado = estimativa;
 		burstAtual = 0;
 	}
-
 }
