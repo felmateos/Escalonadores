@@ -33,7 +33,7 @@ public abstract class SO {
 			}
 
 			executaUmCiclo();
-			//imprimeEstado();
+			imprimeEstado();
 		}
 
 		imprimeEstatisticas();
@@ -160,8 +160,8 @@ public abstract class SO {
 	protected abstract int tempoRespostaMedio();
 
 	protected abstract int tempoRetornoMedio();
-	
+
 	protected abstract int trocasContexto();
-	
+
 	public abstract void defineEscalonador(Escalonador e);
 }

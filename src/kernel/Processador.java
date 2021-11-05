@@ -14,7 +14,7 @@ public class Processador {
 		} else if (op instanceof Soma) {
 			Soma s = (Soma) op;
 			int a = registradores[s.registradorParcela1];
-			int b = registradores[s.registradorParcela2]; 
+			int b = registradores[s.registradorParcela2];
 			registradores[s.registradorTotal] = a + b;
 		} else {
 			throw new RuntimeException("Operacão Inválida");
