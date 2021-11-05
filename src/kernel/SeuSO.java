@@ -28,7 +28,9 @@ public class SeuSO extends SO {//////////DAR UM NOME PRO GAROTAO
 
 	@Override
 	protected void trocaContexto(PCB pcbAtual, PCB pcbProximo) {
-		tContexto++;
+		try {
+			if (pcbAtual.idProcesso != -1 && pcbProximo.idProcesso != -1) tContexto++;
+		} catch (NullPointerException e) {}
 		pcbAtual.registradores = processador.registradores;
 		prontos.remove(pcbAtual);
 		if (escalonador.isProcessoTerminado() && escalonador.getAtual().idProcesso != -1) {
@@ -117,7 +119,7 @@ public class SeuSO extends SO {//////////DAR UM NOME PRO GAROTAO
 				tempoEspera.put(pcb.idProcesso, tempoEspera.get(pcb.idProcesso) + 1);
 			if (tempoResposta.putIfAbsent(pcb.idProcesso, 0) != null && !pcb.respondeu)
 				tempoResposta.put(pcb.idProcesso, tempoResposta.get(pcb.idProcesso) + 1);
-			if (tempoRetorno.putIfAbsent(pcb.idProcesso, 0) != null && !pcb.respondeu)
+			if (tempoRetorno.putIfAbsent(pcb.idProcesso, 0) != null)
 				tempoRetorno.put(pcb.idProcesso, tempoRetorno.get(pcb.idProcesso) + 1);
 		}
 	}

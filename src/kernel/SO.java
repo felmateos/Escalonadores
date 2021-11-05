@@ -33,7 +33,7 @@ public abstract class SO {
 			}
 
 			executaUmCiclo();
-			imprimeEstado();
+			//imprimeEstado();
 		}
 
 		imprimeEstatisticas();

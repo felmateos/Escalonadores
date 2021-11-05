@@ -10,7 +10,6 @@ public class SRTF extends Escalonador{
     public void executaCiclo(List<PCB> prontos) {
         if (getAtual().contadorDePrograma == getAtual().codigo.length) setProcessoTerminado(true);
         else {
-            verificaTempoRestEstimado(prontos);
             setProcessoTerminado(false);
             Operacao op = getAtual().codigo[getAtual().contadorDePrograma];
             setOpES(op instanceof OperacaoES);
@@ -18,6 +17,7 @@ public class SRTF extends Escalonador{
                 getAtual().burstAtual++;
                 if (getAtual().tempoRestEstimado > 0) getAtual().tempoRestEstimado--;
             }
+            verificaTempoRestEstimado(prontos);
         }
     }
 
