@@ -28,9 +28,8 @@ public class SeuSO extends SO {//////////DAR UM NOME PRO GAROTAO
 
 	@Override
 	protected void trocaContexto(PCB pcbAtual, PCB pcbProximo) {
-		try {
-			if (pcbAtual.idProcesso != -1 && pcbProximo.idProcesso != -1) tContexto++;
-		} catch (NullPointerException e) {}
+		if (pcbAtual.idProcesso != -1 && pcbProximo != null
+				&& (pcbAtual.respondeu || pcbProximo.respondeu)) tContexto++;
 		pcbAtual.registradores = processador.registradores;
 		prontos.remove(pcbAtual);
 		if (escalonador.isProcessoTerminado() && escalonador.getAtual().idProcesso != -1) {
@@ -45,7 +44,6 @@ public class SeuSO extends SO {//////////DAR UM NOME PRO GAROTAO
 			prontos.add(pcbAtual);
 			pcbAtual.estado = PCB.Estado.PRONTO;
 		}
-		Collections.sort(prontos);////presumo q tenha q ordenar
 		escalonador.setAtual(processoNulo());
 		if (pcbProximo != null) escalonador.setAtual(pcbProximo);
 		processador.registradores = pcbAtual.registradores;
@@ -71,11 +69,11 @@ public class SeuSO extends SO {//////////DAR UM NOME PRO GAROTAO
 		if (pcb.contadorDePrograma == pcb.codigo.length) {
 			pcb.estado = PCB.Estado.TERMINADO;
 			terminados.add(pendencia.getPcb());
-		} else if (pcb.codigo[pcb.contadorDePrograma] instanceof OperacaoES) adicionaOperacaoES(pcb);
-		else {
+		} else if (pcb.codigo[pcb.contadorDePrograma] instanceof OperacaoES) {
+			adicionaOperacaoES(pcb);
+		} else {
 			pcb.estado = PCB.Estado.PRONTO;
 			prontos.add(pcb);
-			Collections.sort(prontos);////presumo q tenha q ordenar
 		}
 	}
 
@@ -90,7 +88,6 @@ public class SeuSO extends SO {//////////DAR UM NOME PRO GAROTAO
 		if (escalonador.getAtual() == null) return operacaoNula();
 		Operacao op = escalonador.getAtual().codigo[escalonador.getAtual().contadorDePrograma];
 		escalonador.getAtual().contadorDePrograma++;
-		//escalonador.getAtual().burstAtual++;//agr ta no sjf (aparentemente ta de boa)
 		return op;
 	}
 
@@ -100,12 +97,11 @@ public class SeuSO extends SO {//////////DAR UM NOME PRO GAROTAO
 
 	@Override
 	protected void executaCicloKernel() {
-		atualizaEstatistica();//tvz colocar abaixo do executaCiclo
+		atualizaEstatistica();
 		if (prontos.isEmpty() && esperando.isEmpty() && terminados.isEmpty()) escalonador.setAtual(processoNulo());
 		escalonador.executaCiclo(prontos);
 		if (pCount > 1) atualizaEstado();
 		if (escalonador.isProcessoTerminado() || escalonador.isOpES() || escalonador.isTrocaProcesso()) {
-			prontos.remove(escalonador.getAtual());
 			trocaContexto(escalonador.getAtual(), escalonador.escolheProximo(prontos));
 		}
 	}
@@ -163,7 +159,7 @@ public class SeuSO extends SO {//////////DAR UM NOME PRO GAROTAO
 	protected List<Integer> idProcessosProntos() {
 		List<Integer> ip = new LinkedList<>();
 		for (PCB p : prontos) ip.add(p.idProcesso);
-		//Collections.sort(ip);
+		Collections.sort(ip);//n sei se tem q ordenar
 		return ip;
 	}
 
@@ -190,22 +186,22 @@ public class SeuSO extends SO {//////////DAR UM NOME PRO GAROTAO
 	}
 
 	@Override
-	protected int tempoEsperaMedio() { //Tempo que ficou em espera
+	protected int tempoEsperaMedio() {
 		return fazMedia(tempoEspera);
 	}
 
 	@Override
-	protected int tempoRespostaMedio() { //Tempo para a 1a execucao
+	protected int tempoRespostaMedio() {
 		return fazMedia(tempoResposta);
 	}
 
 	@Override
-	protected int tempoRetornoMedio() { //Termino - Inicio
+	protected int tempoRetornoMedio() {
 		return fazMedia(tempoRetorno);
 	}
 
 	@Override
-	protected int trocasContexto() { //Trocas de contexto
+	protected int trocasContexto() {
 		return tContexto;
 	}
 

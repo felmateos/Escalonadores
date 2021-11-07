@@ -35,7 +35,8 @@ public class SRTF extends Escalonador{
             for (PCB pcb : prontos) {
                 if (pcb.estado != PCB.Estado.EXECUTANDO) {
                     if (menorBurst == null) menorBurst = pcb;
-                    if (pcb.tempoRestEstimado < menorBurst.tempoRestEstimado) menorBurst = pcb;
+                    if ((pcb.estimativa == menorBurst.estimativa && pcb.idProcesso < menorBurst.idProcesso)
+                            || pcb.estimativa < menorBurst.estimativa) menorBurst = pcb;
                 }
             }
         } else {

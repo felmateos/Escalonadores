@@ -2,7 +2,7 @@ package escalonadores;
 
 import kernel.PCB;
 import operacoes.*;
-import java.util.List;
+import java.util.*;
 
 public class SJF extends Escalonador{
 
@@ -24,7 +24,8 @@ public class SJF extends Escalonador{
         for (PCB pcb : prontos) {
             if (pcb.estado != PCB.Estado.EXECUTANDO) {
                 if (menorBurst == null) menorBurst = pcb;
-                if (pcb.estimativa < menorBurst.estimativa) menorBurst = pcb;
+                if ((pcb.estimativa == menorBurst.estimativa && pcb.idProcesso < menorBurst.idProcesso)
+                        || pcb.estimativa < menorBurst.estimativa) menorBurst = pcb;
             }
         }
         return menorBurst;

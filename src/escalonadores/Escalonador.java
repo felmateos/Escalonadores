@@ -1,7 +1,6 @@
 package escalonadores;
 
 import kernel.*;
-import operacoes.*;
 import java.util.*;
 
 public abstract class Escalonador {
@@ -10,17 +9,9 @@ public abstract class Escalonador {
     private boolean opES = false;
     private boolean trocaProcesso = false;
 
-    public void executaCiclo(List<PCB> prontos) {
-        if (atual.contadorDePrograma == atual.codigo.length) processoTerminado = true;
-        else {
-            processoTerminado = false;
-            Operacao op = atual.codigo[atual.contadorDePrograma];
-            opES = op instanceof OperacaoES;
-        }
-    }
+    public void executaCiclo(List<PCB> prontos) {}
 
     public PCB escolheProximo(List<PCB> prontos) {
-        if (!prontos.isEmpty()) return prontos.get(0);
         return null;
     }
 
